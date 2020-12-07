@@ -1,50 +1,35 @@
+mod part_1_quadratic;
+
 const INPUT: &str = include_str!("../input.txt");
 
 use std::collections::{HashMap, HashSet};
 
 type Color<'a> = &'a str;
 
-type Colors<'a> = HashMap<Color<'a>, Vec<Color<'a>>>;
+type ReversedColors<'a> = HashMap<Color<'a>, Vec<Color<'a>>>;
 
-// a cache to store whether a color (transitively) contains another
-type Cache<'a> = HashSet<(Color<'a>, Color<'a>)>;
+// a cache to store all containers
+type Reached<'a> = HashSet<Color<'a>>;
 
-// return the new cache after checking recursively if `other_color` can be found in `color`
-fn color_can_contain_other_color<'a>(
+// find all colors reachable from a given color in the reversed graph
+fn color_is_contained_in_other_color<'a>(
     color: &Color<'a>,
-    other_color: &Color<'a>,
-    colors: &Colors<'a>,
-    cache: Cache<'a>,
-) -> Cache<'a> {
-    match cache.contains(&(*color, *other_color)) {
-        // if we already know the answer, we return the cache as is
-        true => cache,
-        // otherwise we check if the colors contained in `color` contain `other_color`
-        false => colors
-            .get(color)
-            .unwrap()
-            .iter()
-            .fold(cache, |mut cache, c| {
-                // `color` transitively contains all colors which it directly contains
-                cache.insert((color, c));
-                if c == color {
-                    // if a color contains itself, we learn nothing from exploring it again
-                    cache
-                } else {
-                    let mut cache = color_can_contain_other_color(c, other_color, colors, cache);
-
-                    match cache.get(&(*c, *other_color)).cloned() {
-                        // if a color contained directly by `color` contains transitively `other_color`,
-                        // then `color` contains transitively `other_color`
-                        Some(_) => {
-                            cache.insert((color, other_color));
-                            cache
-                        }
-                        // other wise we don't learn anything new
-                        None => cache,
-                    }
-                }
+    colors: &ReversedColors<'a>,
+    reached: Reached<'a>,
+) -> Reached<'a> {
+    match reached.contains(color) {
+        // this color was already reached, we return the cache as is
+        true => reached,
+        // this color was not already reached, add it and its children to the cache
+        false => match colors.get(color) {
+            Some(containers) => containers.iter().fold(reached, |reached, c| {
+                // if we first add `c`, then its children will not be visited due to caching
+                let mut reached = color_is_contained_in_other_color(c, colors, reached);
+                reached.insert(c);
+                reached
             }),
+            None => reached,
+        },
     }
 }
 
@@ -88,7 +73,16 @@ fn count<'a>(
 }
 
 fn main() {
-    let colors: Colors = INPUT
+    // This was my first idea.
+    // This is not ideal as it find reachability for any pair of colors, so the cache size is
+    // quadratic in the number of colors. It does not take into account the fact that we're
+    // looking at the reachability of a given color.
+    // A better idea would be to build the inversed graph: (contained -> container[]), start from the searched value,
+    // and find all reachable nodes
+    part_1_quadratic::main();
+
+    // build the reversed graph, from each color to the colors that contain it
+    let colors: ReversedColors = INPUT
         .split("\n")
         .map(|line| {
             let mut line = line.split(" bags contain ");
@@ -114,15 +108,24 @@ fn main() {
 
             (container, contained)
         })
-        .collect();
+        .fold(
+            ReversedColors::default(),
+            |mut is_contained_in, (container, contained)| {
+                contained.into_iter().for_each(|contained| {
+                    is_contained_in
+                        .entry(contained)
+                        .or_default()
+                        .push(container.clone())
+                });
+                is_contained_in
+            },
+        );
 
     let searched = "shiny gold";
 
-    let cache = colors.keys().fold(Cache::default(), |cache, color| {
-        color_can_contain_other_color(color, &searched, &colors, cache)
-    });
+    let reached = color_is_contained_in_other_color(&searched, &colors, Reached::default());
 
-    let res = cache.iter().filter(|(_, other)| *other == searched).count();
+    let res = reached.len();
 
     println!("{}", res);
 
