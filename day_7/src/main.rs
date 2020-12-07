@@ -1,13 +1,13 @@
 const INPUT: &str = include_str!("../input.txt");
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{HashMap, HashSet};
 
 type Color<'a> = &'a str;
 
-type Colors<'a> = BTreeMap<Color<'a>, Vec<Color<'a>>>;
+type Colors<'a> = HashMap<Color<'a>, Vec<Color<'a>>>;
 
 // a cache to store whether a color (transitively) contains another
-type Cache<'a> = BTreeSet<(Color<'a>, Color<'a>)>;
+type Cache<'a> = HashSet<(Color<'a>, Color<'a>)>;
 
 // return the new cache after checking recursively if `other_color` can be found in `color`
 fn color_can_contain_other_color<'a>(
@@ -48,9 +48,9 @@ fn color_can_contain_other_color<'a>(
     }
 }
 
-type CountedColors<'a> = BTreeMap<Color<'a>, Vec<(usize, Color<'a>)>>;
+type CountedColors<'a> = HashMap<Color<'a>, Vec<(usize, Color<'a>)>>;
 
-type CountedCache<'a> = BTreeMap<Color<'a>, usize>;
+type CountedCache<'a> = HashMap<Color<'a>, usize>;
 
 // get the number of bags in a given bag *including itself* and return it in a cache
 // an empty bag yields 1
