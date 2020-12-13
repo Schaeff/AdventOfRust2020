@@ -40,7 +40,6 @@ fn main() {
     let (_, position) = INPUT.split('\n').fold(
         (Complex::new(10, 1), Complex::new(0, 0)),
         |(waypoint, position), instruction| {
-
             let length = instruction[1..].parse::<isize>().unwrap();
 
             match &instruction.chars().nth(0).unwrap() {
